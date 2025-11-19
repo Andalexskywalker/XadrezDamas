@@ -26,9 +26,11 @@ A robust desktop game engine featuring both Chess and Checkers (Damas), built wi
 
 ## How to Run
 
-### From Runnable JAR
-1.  Download the `XadrezDamas.jar` from the Releases section (if available).
-2.  Run: `java -jar XadrezDamas.jar`
+### From Release (Recommended)
+1.  Go to the **Releases** section of this repository.
+2.  Download the latest `.zip` file (e.g., `XadrezDamas_v1.0.zip`).
+3.  Extract the zip file.
+4.  Double-click `play.bat` to start the game.
 
 ### From Source (Eclipse)
 1.  Import the project into Eclipse.
