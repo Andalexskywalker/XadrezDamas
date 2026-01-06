@@ -160,6 +160,36 @@ public class Xadrez extends JFrame implements ActionListener {
 			return;
 
 		if (oTabuleiro.moverPeca(selecionada.getPosicao(), destino)) {
+			// Verificar se o movimento deixa o próprio rei em xeque
+			if (emXeque(turno)) {
+				// Desfaz o movimento
+				oTabuleiro.removerPeca(destino);
+				oTabuleiro.colocarPeca(origem, selecionada);
+				if (selecionada instanceof Peao) {
+					// Tentar reverter se era primeira jogada e agora nao é
+					// Nota: Como moveu=true só é setado no mover(), se desfizermos,
+					// o objeto ainda tem moveu=true. Precisamos saber se ERA false antes.
+					// Simplificacao: Se estava na linha inicial (y=2 branco, y=7 preto), deve ser
+					// falso.
+					// Mas espere, PecaDefault nao guarda linha inicial.
+					// Assumimos que o usuario nao pode "desfazer" uma jogada valida que ja fez...
+					// MAS aqui estamos desfazendo um movimento que o usuario TENTOU fazer mas era
+					// INVALIDO (check).
+					// O metodo mover() ja setou moveu=true. Precisamos reverter.
+
+					Peao p = (Peao) selecionada;
+					int yInicial = (p.getCor() == Peca.BRANCAS) ? 2 : 7;
+					if (origem.y == yInicial) {
+						p.setMoveu(false);
+					}
+				}
+				JOptionPane.showMessageDialog(this, "Movimento inválido: O Rei ficaria em xeque!", "Aviso",
+						JOptionPane.WARNING_MESSAGE);
+				selecionada = null;
+				repaint();
+				return;
+			}
+
 			if (selecionada.ePromovivel()) {
 				Peca nova = promover(selecionada.getCor());
 				oTabuleiro.colocarPeca(destino, nova);
@@ -202,14 +232,30 @@ public class Xadrez extends JFrame implements ActionListener {
 						Point origem = p.getPosicao();
 						Peca captura = oTabuleiro.getPeca(dest);
 
+						boolean eraPrimeiroMovimento = false;
+						if (p instanceof Peao) {
+							eraPrimeiroMovimento = !((Peao) p).isMoveu();
+						}
+
 						if (oTabuleiro.moverPeca(origem, dest)) {
+							// Verificar se o movimento deixa a CPU em xeque
+							boolean emXeque = emXeque(Peca.PRETAS);
+
 							// Undo
 							oTabuleiro.removerPeca(dest);
 							oTabuleiro.colocarPeca(origem, p);
 							if (captura != null) {
 								oTabuleiro.colocarPeca(dest, captura);
 							}
-							destinosValidos.add(dest);
+
+							// Restaurar estado do peão
+							if (p instanceof Peao && eraPrimeiroMovimento) {
+								((Peao) p).setMoveu(false);
+							}
+
+							if (!emXeque) {
+								destinosValidos.add(dest);
+							}
 						}
 					}
 				}
@@ -226,9 +272,46 @@ public class Xadrez extends JFrame implements ActionListener {
 		if (pecaEscolhida != null && destinoEscolhido != null) {
 			animarMovimento(pecaEscolhida, destinoEscolhido);
 		} else {
-			JOptionPane.showMessageDialog(this, "CPU não tem jogadas válidas. Você venceu!", "Fim de Jogo",
-					JOptionPane.INFORMATION_MESSAGE);
+			if (emXeque(Peca.PRETAS)) {
+				JOptionPane.showMessageDialog(this, "Xeque-mate! Você venceu!", "Fim de Jogo",
+						JOptionPane.INFORMATION_MESSAGE);
+			} else {
+				JOptionPane.showMessageDialog(this, "Afogamento! Empate.", "Fim de Jogo",
+						JOptionPane.INFORMATION_MESSAGE);
+			}
 		}
+	}
+
+	private boolean emXeque(int cor) {
+		Point posicaoRei = encontrarRei(cor);
+		if (posicaoRei == null)
+			return false; // Deve haver um rei
+
+		// Verificar todas as peças inimigas
+		int corInimiga = (cor == Peca.BRANCAS) ? Peca.PRETAS : Peca.BRANCAS;
+		for (int x = 1; x <= 8; x++) {
+			for (int y = 1; y <= 8; y++) {
+				Peca p = oTabuleiro.getPeca(new Point(x, y));
+				if (p != null && p.getCor() == corInimiga) {
+					if (p.podeMover(posicaoRei)) {
+						return true;
+					}
+				}
+			}
+		}
+		return false;
+	}
+
+	private Point encontrarRei(int cor) {
+		for (int x = 1; x <= 8; x++) {
+			for (int y = 1; y <= 8; y++) {
+				Peca p = oTabuleiro.getPeca(new Point(x, y));
+				if (p instanceof Rei && p.getCor() == cor) {
+					return new Point(x, y);
+				}
+			}
+		}
+		return null;
 	}
 
 	private void animarMovimento(Peca peca, Point dest) {
