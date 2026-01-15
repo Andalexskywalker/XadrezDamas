@@ -4,4 +4,8 @@ bin/
 .classpath
 .project
 *.jar
-DEPLOYMENT.md
+# OS junk
+.DS_Store
+Thumbs.db
+Manifest.txt
+
